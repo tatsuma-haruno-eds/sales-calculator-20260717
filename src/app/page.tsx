@@ -30,7 +30,7 @@ const createId = () => {
 };
 
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreenState] = useState<Screen>("home");
   const [input, setInput] = useState<MortgageInput>(defaultInput);
   const [history, setHistory] = useState<SavedDiagnosis[]>([]);
   const [selected, setSelected] = useState<SavedDiagnosis | null>(null);
@@ -38,6 +38,11 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [saveNotice, setSaveNotice] = useState("");
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [historyName, setHistoryName] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [largeText, setLargeText] = useState(false);
   const draftRevision = useRef(0);
@@ -88,6 +93,11 @@ export default function Home() {
     setSelected(null);
   }
 
+  function setScreen(nextScreen: Screen) {
+    if (nextScreen !== "result") setSaveNotice("");
+    setScreenState(nextScreen);
+  }
+
   function startNewDiagnosis() {
     draftRevision.current += 1;
     setInput(defaultInput());
@@ -114,19 +124,42 @@ export default function Home() {
   }
 
   async function saveDiagnosis() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
     if (Object.keys(errors).length > 0) {
       setError("入力内容を確認してください。");
       setScreen("input");
       return;
     }
     if (history.length >= 10 && !window.confirm("履歴は最大10件です。最も古い履歴を削除して保存しますか？")) return;
-    const record: SavedDiagnosis = { id: createId(), createdAt: new Date().toISOString(), input };
+    setHistoryName(input.memo);
+    setSaveError("");
+    setShowSaveDialog(true);
+  }
+
+  async function confirmSaveDiagnosis() {
+    const memo = historyName.trim();
+    if (!memo) {
+      setSaveError("履歴に表示する名前を入力してください。");
+      return;
+    }
+    if (memo.length > 20) {
+      setSaveError("履歴名は20文字以内で入力してください。");
+      return;
+    }
+    if (saving) return;
+    const recordInput = { ...input, memo };
+    const record: SavedDiagnosis = { id: createId(), createdAt: new Date().toISOString(), input: recordInput };
+    setSaving(true);
     try {
       await persistHistory([record, ...history].slice(0, 10));
-      setNotice("診断結果をこの端末に暗号化して保存しました。");
+      setInput(recordInput);
+      setSaveNotice("診断結果をこの端末に暗号化して保存しました。");
       setSelected(record);
+      setShowSaveDialog(false);
     } catch (cause) {
       setError(cause instanceof Error ? `履歴を保存できませんでした。${cause.message}` : "履歴を保存できませんでした。");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -134,6 +167,18 @@ export default function Home() {
     setSelected(record);
     setScreen("result");
     setShowSchedule(false);
+  }
+
+  function advanceStep() {
+    setStep((current) => current + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showDiagnosisResult() {
+    setSelected(null);
+    setShowSchedule(false);
+    setScreen("result");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function deleteRecord(id: string) {
@@ -219,6 +264,7 @@ export default function Home() {
       <div className="main-content">
         {error && <div className="alert alert-error" role="alert">{error}<button onClick={() => setError("")} aria-label="閉じる">×</button></div>}
         {notice && <div className="alert alert-success" role="status">{notice}<button onClick={() => setNotice("")} aria-label="閉じる">×</button></div>}
+        {screen === "result" && saveNotice && <div className="alert alert-success" role="status">{saveNotice}<button onClick={() => setSaveNotice("")} aria-label="閉じる">×</button></div>}
         {!hydrated && <div className="loading-note">この端末の保存データを確認しています…</div>}
 
         {screen === "home" && <section className="home-screen">
@@ -326,7 +372,7 @@ export default function Home() {
               </div>}
               <div className="form-actions">
                 <button className="button button-quiet" onClick={() => step === 0 ? setScreen("home") : setStep((value) => value - 1)}>{step === 0 ? "キャンセル" : "← 戻る"}</button>
-                {step < 2 ? <button className="button button-primary" onClick={() => setStep((value) => value + 1)}>次へ進む <span>→</span></button> : <button className="button button-primary" onClick={() => { setSelected(null); setScreen("result"); setShowSchedule(false); }} disabled={Object.keys(errors).length > 0}>診断結果を見る <span>→</span></button>}
+                {step < 2 ? <button className="button button-primary" onClick={advanceStep}>次へ進む <span>→</span></button> : <button className="button button-primary" onClick={showDiagnosisResult} disabled={Object.keys(errors).length > 0}>診断結果を見る <span>→</span></button>}
               </div>
             </div>
             <aside className="estimate-card"><span className="eyebrow">QUICK ESTIMATE</span><h3>入力中の返済目安</h3><p>変動金利・標準金利の場合</p><strong>{formatYen(diagnosis.scenarios[0].monthlyPayment)}<small> / 月</small></strong><div className="estimate-line"><span>借入予定額</span><b>{formatMan(diagnosis.principal)}</b></div><div className="estimate-line"><span>返済期間</span><b>{input.years}年</b></div><div className="estimate-line"><span>適用金利（標準）</span><b>年0.7%</b></div><div className="estimate-note">金利や審査条件によって実際の返済額は異なります。</div></aside>
@@ -394,6 +440,27 @@ export default function Home() {
           <section className="settings-card"><span className="eyebrow">ABOUT</span><h2>診断について</h2><p>金利は固定値（変動0.7%、固定10年1.3%、全期間固定1.8%）を使った概算です。金融機関の正式な審査や融資条件を示すものではありません。</p><p className="version-info">住宅ローン診断ツール ・ ローカル診断版</p></section>
         </section>}
       </div>
+      {showSaveDialog && <div className="dialog-backdrop" onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) setShowSaveDialog(false);
+      }}>
+        <section className="name-dialog" role="dialog" aria-modal="true" aria-labelledby="save-dialog-title">
+          <span className="eyebrow">SAVE DIAGNOSIS</span>
+          <h2 id="save-dialog-title">履歴に表示する名前</h2>
+          <p>保存した診断を見分けるための名前を入力してください。</p>
+          <form onSubmit={(event) => { event.preventDefault(); void confirmSaveDiagnosis(); }}>
+            <label className="login-label" htmlFor="history-name">名前（20文字以内）</label>
+            <input id="history-name" autoFocus maxLength={20} value={historyName} onChange={(event) => {
+              setHistoryName(event.target.value);
+              setSaveError("");
+            }} />
+            {saveError && <div className="login-error" role="alert">{saveError}</div>}
+            <div className="name-dialog-actions">
+              <button className="button button-secondary" type="button" disabled={saving} onClick={() => setShowSaveDialog(false)}>キャンセル</button>
+              <button className="button button-primary" type="submit" disabled={saving}>{saving ? "保存しています…" : "保存する"}</button>
+            </div>
+          </form>
+        </section>
+      </div>}
       <footer className="site-footer"><span>住宅ローン診断ツール</span><span>入力データは端末内で処理・保存されます</span></footer>
     </main>
   );

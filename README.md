@@ -695,10 +695,14 @@ localStorageの容量上限（約5MB）に対し、履歴10件は暗号化後も
 | POST | /api/auth/logout | 必要 | Cookie破棄 | no-store |
 
 - **/api/config**: `RATES_JSON` があればそれを、なければ `config/rates.json` を返し、Zodで検証。検証失敗時は500とし、クライアントは同梱の既定値で動作を継続。クライアントは「同梱既定値で起動 → バックグラウンドで取得 → 版数が新しければ保存して次回診断から適用」。診断途中で金利が切り替わらない。
-- **認証**: httpOnly / secure / SameSite=Lax のCookie（有効30日、jose HS256、`SESSION_SECRET` で署名）。パスコード比較はタイミング攻撃対策付き。総当たり対策はVercelのファイアウォール（レート制限ルール）で設定。
+- **認証**: httpOnly / secure / SameSite=Lax のセッションCookie（ブラウザー終了時まで保持、HMAC署名）。パスコード比較はタイミング攻撃対策付き。総当たり対策はVercelのファイアウォール（レート制限ルール）で設定。
 - **エラー形式**: `{ "error": { "code": "...", "message": "..." } }`。
 - オフライン時は `/api/config` をService Workerのキャッシュから返し、未取得なら同梱既定値を使用。
 - 将来候補（Phase 2）: `POST /api/diagnose`（サーバー側検証用。既定は無効）。
+
+### ローカル開発での認証設定
+
+ルートの `.env` に `APP_ACCESS_PASSCODE` を設定してください。セッション署名に別の秘密鍵を使う場合は、32文字以上のランダムな `SESSION_SECRET` も設定します。`SESSION_SECRET` が未設定の場合は `APP_ACCESS_PASSCODE` を署名鍵として使用します。`.env.example` は設定例であり、実際の秘密情報はコミットしないでください。
 
 ## 7. ファイル構成
 

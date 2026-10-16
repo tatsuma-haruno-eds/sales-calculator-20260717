@@ -264,6 +264,22 @@ th:first-child, td:first-child { text-align: left; }
 .settings-row > div:first-child small { margin-top: 3px; color: #849089; font-size: 9px; }
 .settings-danger { margin-top: 4px; }
 .version-info { padding-top: 10px; border-top: 1px solid #edf0eb; }
+.login-screen { min-height: 100vh; padding: 24px; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 0%, #e7f0e9 0%, var(--paper) 62%); }
+.login-card { width: min(100%, 420px); padding: 34px 36px 30px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 15px 50px #324e3c12; }
+.login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 32px; font-size: 14px; font-weight: 750; }
+.login-card h1 { margin: 8px 0 4px; font-size: 23px; font-weight: 650; }
+.login-card > p { margin: 0 0 22px; color: #77867f; font-size: 12px; line-height: 1.8; }
+.login-label { display: block; margin-bottom: 7px; color: #43564f; font-size: 12px; font-weight: 700; }
+.login-card input { width: 100%; min-height: 47px; padding: 10px 12px; border: 1px solid #dfe5de; border-radius: 7px; background: #fff; color: var(--ink); }
+.login-submit { width: 100%; margin-top: 14px; }
+.login-error { margin-top: 9px; color: #a13f2d; font-size: 11px; }
+.login-note { display: block; margin-top: 16px; color: #87938c; font-size: 10px; text-align: center; }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 50; padding: 20px; display: grid; place-items: center; background: #18292380; }
+.name-dialog { width: min(100%, 430px); padding: 25px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 20px 60px #13241d40; }
+.name-dialog h2 { margin: 6px 0 3px; font-size: 19px; }
+.name-dialog > p { margin: 0 0 17px; color: #77867f; font-size: 11px; }
+.name-dialog input { width: 100%; min-height: 45px; padding: 9px 11px; border: 1px solid #dfe5de; border-radius: 7px; background: white; color: var(--ink); }
+.name-dialog-actions { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
 .large-text { font-size: 18px; }
 .large-text .main-content { font-size: 18px; }
 .large-text .field-title, .large-text .button, .large-text .topnav button { font-size: 1em; }
@@ -348,6 +364,7 @@ th:first-child, td:first-child { text-align: left; }
   .settings-card { padding: 16px; }
   .settings-row { align-items: flex-start; flex-direction: column; padding: 11px 0; }
   .settings-row > div:last-child { flex-wrap: wrap; }
+  .login-card { padding: 27px 23px 24px; }
 }
 @media print {
   @page { size: A4 portrait; margin: 15mm 13mm; }
